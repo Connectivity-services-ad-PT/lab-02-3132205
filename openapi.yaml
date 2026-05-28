@@ -9,8 +9,8 @@ info:
     name: AI Vision Team - Group A4
     email: a4-aivision@example.edu.vn
 servers:
-  - url: http://localhost:4010
-    description: Prism mock server phục vụ Lab 02
+  - url: http://localhost:4011
+    description: Prism mock server phục vụ Lab 03 chạy cổng 4011
   - url: https://api.campus.local
     description: Class network placeholder
 tags:
@@ -18,8 +18,7 @@ tags:
     description: Kiểm tra trạng thái service
   - name: vision
     description: Các nghiệp vụ phân tích và xử lý hình ảnh thông minh
-security:
-  - bearerAuth: []
+
 paths:
   /health:
     get:
@@ -27,7 +26,6 @@ paths:
       summary: Kiểm tra trạng thái service
       description: Endpoint kiểm tra dịch vụ AI Vision còn hoạt động tốt hay không.
       tags: [health]
-      security: []
       responses:
         '200':
           description: Service đang hoạt động ổn định
@@ -48,6 +46,18 @@ paths:
       summary: Lấy thông tin phiên bản mô hình AI
       description: Kiểm tra thông tin cấu hình và phiên bản của mô hình AI Core hiện tại.
       tags: [vision]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: confidenceThreshold
+          in: query
+          required: false
+          description: Ngưỡng tin cậy dùng để lọc biên đối tượng nhận diện.
+          schema:
+            type: number
+            minimum: 0.0
+            maximum: 1.0
+            example: 0.50
       responses:
         '200':
           description: Trả về thông tin mô hình thành công
@@ -56,7 +66,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [modelName, version]
+                required: [modelName, version, modelStatus]
                 properties:
                   modelName:
                     type: string
@@ -64,6 +74,10 @@ paths:
                   version:
                     type: string
                     example: "v2.4.1"
+                  modelStatus:
+                    type: string
+                    enum: [ACTIVE, TRAINING, MAINTENANCE]
+                    example: "ACTIVE"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -75,6 +89,8 @@ paths:
       summary: Tiếp nhận frame hình ảnh để phân tích
       description: Nhận dữ liệu ảnh mã hóa Base64 đồng bộ từ Camera Stream gửi qua khi phát hiện chuyển động.
       tags: [vision]
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -127,6 +143,8 @@ paths:
       summary: Truy vấn chi tiết một kết quả nhận diện
       description: Cho phép tra cứu lại lịch sử phân tích của một frame bất kỳ dựa trên UUID duy nhất.
       tags: [vision]
+      security:
+        - bearerAuth: []
       parameters:
         - name: detectionId
           in: path
@@ -207,6 +225,12 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://campus.local/errors/unprocessable"
+            title: "Lỗi thực thi nghiệp vụ"
+            status: 422
+            detail: "Dữ liệu ảnh không thể giải mã hoặc xử lý bởi mô hình AI."
+            instance: "/vision/detect"
 
     InternalServerError:
       description: Lỗi phát sinh ngoài ý muốn từ phía hệ thống máy chủ AI Vision
@@ -214,6 +238,12 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: "https://campus.local/errors/internal"
+            title: "Lỗi hệ thống máy chủ"
+            status: 500
+            detail: "Mô hình AI core bị mất kết nối đột ngột hoặc tràn bộ nhớ RAM."
+            instance: "/vision/detect"
 
   schemas:
     HealthStatus:
@@ -314,7 +344,8 @@ components:
           required: [actionDetected]
           properties:
             actionDetected:
-              type: [string, 'null']
+              type: string
+              nullable: true
               maxLength: 100
               description: Hành vi bất thường nhận diện được, nhận giá trị null nếu không phát hiện nguy hiểm.
               example: "Intruding"
@@ -327,7 +358,8 @@ components:
           required: [licensePlate]
           properties:
             licensePlate:
-              type: [string, 'null']
+              type: string
+              nullable: true
               pattern: '^[0-9]{2}[A-Z]-[0-9]{4,5}$'
               description: Biển số xe quét được từ công cụ OCR, null nếu bị che khuất hoặc không rõ.
               example: "30A-12345"
@@ -346,12 +378,16 @@ components:
           example: "Dữ liệu không hợp lệ"
         status:
           type: integer
+          minimum: 400
+          maximum: 599
           example: 400
         detail:
-          type: [string, 'null']
+          type: string
+          nullable: true
           example: "Payload không đúng quy ước thiết kế JSON Schema"
         instance:
-          type: [string, 'null']
+          type: string
+          nullable: true
           example: "/vision/detect"
         errors:
           type: array
