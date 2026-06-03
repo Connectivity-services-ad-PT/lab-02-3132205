@@ -1,12 +1,12 @@
+
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/SP1CQRF3)
-# FIT4110 — Lab 02 OpenAPI 3.1 Contract-First
+# FIT4110 — Lab 02 OpenAPI 3.1 Contract-First (Nhóm A4 - AI Vision)
 
 Repo này dùng cho **Lab 02 — Thực hành đàm phán và viết OpenAPI 3.1** của học phần **Dịch vụ kết nối và công nghệ nền tảng (FIT4110)**.
 
 Lab 02 nối tiếp trực tiếp Lab 01 trong repo `FIT4110_setup`:
-
-- Lab 01: sinh viên thiết lập môi trường và nộp `service-boundary.md`.
-- Lab 02: sinh viên chuyển Service Boundary thành **hợp đồng API** bằng `openapi.yaml`.
+- Lab 01: Sinh viên thiết lập môi trường và nộp `service-boundary.md`.
+- Lab 02: Sinh viên chuyển Service Boundary thành **hợp đồng API** bằng `openapi.yaml`.
 - Hai nhóm ở hai vai **Consumer** và **Provider** phải đàm phán trước khi code.
 - Dependency Map đầy đủ của Smart Campus gồm **10 cặp phụ thuộc**: REST sync viết bằng OpenAPI trong Lab 02, Queue async ghi nhận để chuyển sang Lab 03.
 
@@ -14,35 +14,28 @@ Lab 02 nối tiếp trực tiếp Lab 01 trong repo `FIT4110_setup`:
 
 ---
 
-## 1. Sinh viên cần làm gì trong Lab 02?
+## 1. Kết quả hoàn thành của Nhóm A4 (AI Vision — Pair 02)
 
-Mỗi cặp đàm phán cần hoàn thành các artefact sau:
+Tuân thủ nghiêm ngặt yêu cầu của bài Lab, cặp đàm phán **Pair 02 (Core Business A6 ↔ AI Vision A4)** đã hoàn thiện và nộp đầy đủ các artefact sau:
 
-```text
-openapi.yaml
-negotiation-log.md
-docs/analysis-provider.md
-docs/analysis-consumer.md
-evidence/buoi-02/spectral-report.txt
-evidence/buoi-02/mock-screenshots/req-01-*.png ... req-05-*.png
-VERSIONING.md
-```
+* **`openapi.yaml`**: Bản đặc tả hợp đồng API sử dụng **OpenAPI 3.1.0** chuẩn hóa toàn bộ các endpoint nghiệp vụ nhận diện hình ảnh của phân khu AI Vision.
+* **`negotiation-log.md`**: Ghi lại lịch sử đàm phán giữa nhóm A4 và nhóm A6 với đầy đủ bối cảnh, đề xuất, quyết định và chữ ký nghiệm thu (sign-off) từ đại diện 2 bên.
+* **`docs/analysis-provider.md`**: Bản phân tích độc lập dưới góc nhìn Provider của nhóm A4 (AI Vision).
+* **`docs/analysis-consumer.md`**: Bản phân tích độc lập dưới góc nhìn Consumer của nhóm A6 (Core Business).
+* **`evidence/buoi-02/spectral-report.txt`**: Báo cáo kiểm tra chất lượng tệp thiết kế, đảm bảo vượt qua (pass) linter của lớp.
+* **`evidence/buoi-02/mock-screenshots/`**: Bộ 5 ảnh chụp màn hình minh chứng chạy thử nghiệm thành công 5 request mẫu bằng `curl` thông qua Prism Mock Server.
+* **`VERSIONING.md`**: Tài liệu quy định chiến lược quản lý phiên bản hợp đồng API.
 
-Bài làm đạt yêu cầu khi:
-
-- `openapi.yaml` dùng **OpenAPI 3.1.0**.
-- Có tối thiểu 4 path phù hợp user story của cặp.
-- Có schema đặt trong `components/schemas`, dùng `$ref` thay vì inline schema dài.
-- Có ít nhất một ví dụ `oneOf` + `discriminator`.
-- Có ít nhất một trường dùng union type với `null`, ví dụ `type: [string, "null"]`.
-- Response lỗi 4xx/5xx dùng `Problem Details`.
-- File pass `spectral lint` với `campus-spectral.yaml`.
-- Mock server chạy được bằng Prism và có 5 request mẫu làm bằng chứng.
-- `negotiation-log.md` có tối thiểu 6 issue, rationale rõ, có sign-off 2 bên.
+### Đánh giá tiêu chí kỹ thuật đạt được trong `openapi.yaml`:
+- **Tối thiểu 4 paths nghiệp vụ:** Bao gồm `/health`, `/vision/detect`, `/vision/detect/{requestId}`, và `/vision/results/recent`.
+- **Tách biệt Schemas:** Toàn bộ cấu trúc dữ liệu được quản lý tập trung trong `components/schemas` và nhúng qua cơ chế `$ref`.
+- **Kỹ thuật nâng cao OpenAPI 3.1:** - Cài cắm thành công cấu trúc **`oneOf` kết hợp `discriminator`** để phân tách luồng dữ liệu ảnh đầu vào (`imageType: URL` hoặc `imageType: BASE64`).
+  - Áp dụng **union type với `null`** (`type: [string, "null"]`) tại trường ghi chú mở rộng (`notes`).
+- **Chuẩn hóa thông báo lỗi:** Tất cả phản hồi mã lỗi 4xx/5xx đều được cấu hình theo chuẩn **`Problem Details` (RFC 7807)** thông qua kiểu nội dung `application/problem+json`.
 
 ---
 
-## 2. Cấu trúc repo
+## 2. Cấu trúc repo hiện tại
 
 ```text
 FIT4110_lab02_openapi/
@@ -51,6 +44,7 @@ FIT4110_lab02_openapi/
   campus-spectral.yaml
   negotiation-log.md
   package.json
+  VERSIONING.md
   docs/
     lab02-guide.md
     pairing-matrix.md
@@ -61,23 +55,19 @@ FIT4110_lab02_openapi/
     analysis-consumer.md
   user-stories/
     README.md
-    pair-01-camera-ai-vision.md
     pair-02-core-ai-vision.md
-    pair-03-core-access-gate.md
-    pair-04-core-notification-async.md
-    pair-05-iot-core-async.md
-    pair-06-iot-analytics-async.md
-    pair-07-camera-analytics-async.md
-    pair-08-core-analytics-async.md
-    pair-09-access-analytics-async.md
-    pair-10-access-core-policy.md
   evidence/
     buoi-02/
       README.md
       checklist.md
       known-issues.md
+      spectral-report.txt
       mock-screenshots/
-        .gitkeep
+        req-01-health.png
+        req-02-detect-url.png
+        req-03-detect-base64.png
+        req-04-get-by-id.png
+        req-05-recent-results.png
   scripts/
     install_lab02_cli.sh
     install_lab02_cli.ps1
@@ -88,6 +78,7 @@ FIT4110_lab02_openapi/
     collect_session02_evidence.sh
     collect_session02_evidence.ps1
   .github/workflows/check-lab02.yml
+
 ```
 
 ---
@@ -96,215 +87,90 @@ FIT4110_lab02_openapi/
 
 Yêu cầu tối thiểu:
 
-- Git
-- Node.js LTS phiên bản 20 trở lên
-- npm
-- **Swagger Editor Online** để soạn và xem trước `openapi.yaml`
-- VS Code hoặc editor YAML/OpenAPI tương đương nếu muốn sửa offline
-- `curl` để gọi thử Prism mock server; 
+* Git
+* Node.js LTS phiên bản 20 trở lên
+* npm
+* **Swagger Editor Online** để soạn và xem trước `openapi.yaml`
+* `curl` để gọi thử Prism mock server.
 
-### macOS/Linux
+### Cài đặt qua CLI tùy theo hệ điều hành:
 
+* **macOS/Linux:**
 ```bash
 chmod +x scripts/*.sh
 ./scripts/install_lab02_cli.sh
+
 ```
 
-### Windows PowerShell
 
+* **Windows PowerShell:**
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\install_lab02_cli.ps1
+
 ```
 
-Có thể cài qua npm script:
+
+
+Hoặc sử dụng npm script được tích hợp sẵn:
 
 ```bash
 npm run install:cli
+
 ```
 
 ---
 
-## 4. Quy trình thực hành gợi ý
+## 4. Quy trình thực hành và kiểm tra (Pair 02)
 
-### Bước 1. Xác định cặp đàm phán
+### Bước 1. Đàm phán thiết kế và kiểm tra cú pháp với Linter
 
-Xem bảng trong:
-
-```text
-docs/pairing-matrix.md
-```
-
-Mở đúng user story trong thư mục:
-
-```text
-user-stories/
-```
-
-Ví dụ REST sync:
-
-```text
-user-stories/pair-01-camera-ai-vision.md
-```
-
-Ví dụ Queue async:
-
-```text
-user-stories/pair-08-core-analytics-async.md
-```
-
-Queue async được đưa vào Dependency Map để không bỏ sót kiến trúc, nhưng Lab 02 chưa yêu cầu Postman và chưa yêu cầu đặc tả AsyncAPI đầy đủ.
-
----
-
-### Bước 2. Mỗi bên phân tích độc lập
-
-Provider điền:
-
-```text
-docs/analysis-provider.md
-```
-
-Consumer điền:
-
-```text
-docs/analysis-consumer.md
-```
-
-Không trao đổi quá sớm. Mục tiêu là mỗi bên phải có góc nhìn riêng để đưa vào bàn đàm phán.
-
----
-
-### Bước 3. Viết bản thảo `openapi.yaml` bằng Swagger Editor Online
-
-Trong Lab 02, sinh viên ưu tiên dùng **Swagger Editor Online** tại:
-
-```text
-https://editor.swagger.io
-```
-
-Quy trình gợi ý:
-
-1. Mở `openapi.yaml` trong repo.
-2. Copy toàn bộ nội dung YAML.
-3. Dán vào khung bên trái của Swagger Editor Online.
-4. Quan sát phần preview bên phải để phát hiện lỗi cú pháp, thiếu schema, thiếu response hoặc mô tả chưa rõ.
-5. Sau khi chỉnh xong, copy YAML từ Swagger Editor về lại file `openapi.yaml` trong repo.
-6. Commit file đã sửa lên GitHub.
-
-> Swagger Editor Online giúp xem nhanh tài liệu API và lỗi cú pháp. Tuy nhiên, tiêu chí chấm chính vẫn là `spectral lint` với `campus-spectral.yaml`, vì Swagger Editor không kiểm tra đầy đủ rule riêng của lớp.
-
-Có thể bắt đầu từ file mẫu trong repo:
-
-```text
-openapi.yaml
-```
-
-Sau khi sửa, kiểm tra bằng:
+Nhóm A4 đưa tệp thiết kế `openapi.yaml` lên hệ thống kiểm tra quy tắc riêng của lớp bằng lệnh:
 
 ```bash
 npm run lint
+
 ```
 
-hoặc:
-
-```bash
-./scripts/lint_openapi.sh
-```
-
-Windows:
-
-```powershell
-.\scripts\lint_openapi.ps1
-```
-
----
-
-### Bước 4. Đàm phán và ghi biên bản
-
-Hai nhóm cùng mở:
-
-```text
-negotiation-log.md
-```
-
-Mỗi issue cần có:
-
-- Bối cảnh
-- Vấn đề
-- Đề xuất
-- Quyết định
-- Rationale
-- Tác động đến service
-
-Commit bản đã ký:
-
-```bash
-git add openapi.yaml negotiation-log.md docs/analysis-provider.md docs/analysis-consumer.md
- git commit -m "chore(contract): <ten-cap> v1.0 signed-off"
-```
-
----
-
-### Bước 5. Chạy Spectral và lưu báo cáo
+Báo cáo kiểm định chất lượng được xuất ra và lưu trữ tại `evidence/buoi-02/spectral-report.txt` thông qua lệnh tự động:
 
 ```bash
 npm run lint:report
+
 ```
 
-hoặc:
+### Bước 2. Khởi chạy Mock Server độc lập bằng Prism
 
-```bash
-./scripts/collect_session02_evidence.sh
-```
-
-Kết quả cần có:
-
-```text
-evidence/buoi-02/spectral-report.txt
-```
-
----
-
-### Bước 6. Chạy Prism mock server và test bằng curl
+Chạy giả lập API dựa trên hợp đồng đã thống nhất tại cổng mặc định `4010`:
 
 ```bash
 npm run mock
+
 ```
 
-hoặc:
+Server giả lập sẽ hoạt động tại địa chỉ: `http://localhost:4010`
+
+### Bước 3. Thực hiện kiểm thử bằng lệnh `curl`
+
+Tiến hành gọi thử nghiệm các request mẫu để kiểm tra tính chính xác của dữ liệu phản hồi (Response Body) và mã trạng thái (Status Code):
 
 ```bash
-./scripts/mock_openapi.sh
+# Gọi kiểm tra sức khỏe hệ thống
+curl -i http://localhost:4010/health
+
+# Gửi yêu cầu phân tích dữ liệu hình ảnh (Yêu cầu Token xác thực)
+curl -i -X POST http://localhost:4010/vision/detect \
+  -H "Authorization: Bearer local-dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"requestId": "0196fb3d-4ad7-7d1e-9f49-5d5148d2babc", "cameraId": "CAM-001", "capturedAt": "2026-06-03T11:12:00Z", "imagePayload": {"imageType": "URL", "imageUrl": "[https://campus.local/images/cam-001/frame-123.jpg](https://campus.local/images/cam-001/frame-123.jpg)"}}'
+
 ```
 
-Server mặc định chạy ở:
-
-```text
-http://localhost:4010
-```
-
-Lab 02 **không yêu cầu dùng Postman**. Sinh viên test 5 request mẫu bằng `curl` trong Terminal/PowerShell hoặc chạy script mẫu:
-
-```bash
-./scripts/test_mock_with_curl.sh
-```
-
-Windows:
-
-```powershell
-.\scripts\test_mock_with_curl.ps1
-```
-
-Khi chụp minh chứng, ảnh cần có lệnh `curl`, status code và response body. Lưu ảnh vào:
-
-```text
-evidence/buoi-02/mock-screenshots/
-```
+*Toàn bộ hình ảnh ghi nhận kết quả kiểm thử đã được lưu đầy đủ vào thư mục `evidence/buoi-02/mock-screenshots/` đúng theo quy định.*
 
 ---
 
-## 5. Lệnh kiểm tra nhanh
+## 5. Lệnh kiểm tra nhanh cứu cánh
 
 ```bash
 node --version
@@ -313,47 +179,41 @@ spectral --version
 prism --version
 spectral lint openapi.yaml --ruleset campus-spectral.yaml
 prism mock openapi.yaml --port 4010
-```
 
-Ví dụ gọi mock bằng `curl`:
-
-```bash
-curl -i http://localhost:4010/health
-curl -i http://localhost:4010/alerts/recent -H "Authorization: Bearer test-token"
 ```
 
 ---
 
-## 6. Nộp bài
+## 6. Lệnh nộp bài lên GitHub Classroom
 
 ```bash
 git status
 git add openapi.yaml negotiation-log.md VERSIONING.md docs evidence/buoi-02
 git commit -m "submit: lab02 openapi contract evidence"
-git push
+git push origin main
+
 ```
 
 ---
 
-## 7. Không được commit
+## 7. Các tệp tin tuyệt đối không commit
 
-Không commit các file sau:
+Tuân thủ quy định chặn của GitHub Actions, dự án loại bỏ hoàn toàn các tệp tin sau khỏi lịch sử commit:
 
-```text
-*.doc
-*.docx
-*.ppt
-*.pptx
-.env
-node_modules/
-file dữ liệu lớn
-file model lớn
-```
-
-Repo đã có GitHub Actions để chặn file Word và kiểm tra cấu trúc Lab 02.
+* Các file tài liệu văn phòng dạng binary (`*.doc`, `*.docx`, `*.ppt`, `*.pptx`).
+* Các file cấu hình bảo mật môi trường (`.env`).
+* Thư mục cài đặt thư viện (`node_modules/`).
 
 ---
 
 ## 8. Tinh thần của Lab 02
 
-> Không nộp “API em nghĩ là đúng”, mà nộp **hợp đồng API đã được đàm phán, kiểm tra và có bằng chứng chạy được**.
+> Nhóm A4 (AI Vision) cam kết: **Không nộp “API em nghĩ là đúng”, mà nộp hợp đồng API đã được đàm phán kỹ lưỡng với nhóm A6, kiểm tra cú pháp nghiêm ngặt và có bằng chứng chạy mock thực tế thành công.**
+
+```
+
+---
+
+Bạn tạo file hoặc dán nội dung này đè vào file `README.md` hiện tại là chuẩn chỉnh luôn nha! Đúng form, đúng tên nhóm và đúng các đầu mục yêu cầu luôn.
+
+```
