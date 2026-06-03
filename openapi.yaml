@@ -1,133 +1,39 @@
 openapi: 3.1.0
 info:
-  title: Smart Campus — AI Vision Service Contract (Group A4 - Pair 01)
-  version: 1.0.0
+  title: Smart Campus — Core Business & Access Control Platform
   description: |
-    Hợp đồng API chính thức giữa Camera Stream (Consumer - A2) và AI Vision (Provider - A4).
-    Đảm nhận tiếp nhận luồng dữ liệu hình ảnh đồng bộ (REST sync) để phân tích đối tượng khẩn cấp.
-  contact:
-    name: AI Vision Team - Group A4
-    email: a4-aivision@example.edu.vn
+    Hợp đồng API chuẩn hóa phục vụ việc giao tiếp thời gian thực giữa 
+    thiết bị Kiểm soát ra vào (Access Gate - Consumer) và Hệ thống nghiệp vụ trung tâm 
+    (Core Business Service - Provider) thuộc phân khu Smart Campus.
+  version: 1.0.0
+
 servers:
-  - url: http://localhost:4011
-    description: Prism mock server phục vụ Lab 03 chạy cổng 4011
-  - url: https://api.campus.local
-    description: Class network placeholder
-tags:
-  - name: health
-    description: Kiểm tra trạng thái service
-  - name: vision
-    description: Các nghiệp vụ phân tích và xử lý hình ảnh thông minh
+  - url: http://localhost:4010
+    description: Prism Mock Server dành cho môi trường phát triển cục bộ
 
 paths:
-  /health:
-    get:
-      operationId: getHealth
-      summary: Kiểm tra trạng thái service
-      description: Endpoint kiểm tra dịch vụ AI Vision còn hoạt động tốt hay không.
-      tags: [health]
-      responses:
-        '200':
-          description: Service đang hoạt động ổn định
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthStatus'
-              examples:
-                ok:
-                  value:
-                    status: ok
-                    service: ai-vision-service
-                    time: '2026-05-27T08:00:00Z'
-
-  /vision/models/info:
-    get:
-      operationId: getModelInfo
-      summary: Lấy thông tin phiên bản mô hình AI
-      description: Kiểm tra thông tin cấu hình và phiên bản của mô hình AI Core hiện tại.
-      tags: [vision]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: confidenceThreshold
-          in: query
-          required: false
-          description: Ngưỡng tin cậy dùng để lọc biên đối tượng nhận diện.
-          schema:
-            type: number
-            minimum: 0.0
-            maximum: 1.0
-            example: 0.50
-      responses:
-        '200':
-          description: Trả về thông tin mô hình thành công
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [modelName, version, modelStatus]
-                properties:
-                  modelName:
-                    type: string
-                    example: "YOLOv8-Security-Custom"
-                  version:
-                    type: string
-                    example: "v2.4.1"
-                  modelStatus:
-                    type: string
-                    enum: [ACTIVE, TRAINING, MAINTENANCE]
-                    example: "ACTIVE"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /vision/detect:
+  /access/check:
     post:
-      operationId: detectFrame
-      summary: Tiếp nhận frame hình ảnh để phân tích
-      description: Nhận dữ liệu ảnh mã hóa Base64 đồng bộ từ Camera Stream gửi qua khi phát hiện chuyển động.
-      tags: [vision]
-      security:
-        - bearerAuth: []
+      operationId: checkAccessPermission
+      summary: Thẩm định quyền ra vào thời gian thực
+      description: |
+        Được gọi bởi Access Gate (Consumer) ngay khi có sự kiện sinh viên hoặc cán bộ quẹt thẻ vật lý. 
+        Hệ thống trung tâm (Provider) sẽ tính toán tập luật và đưa ra quyết định đóng/mở cửa tức thời.
+      tags:
+        - Access Control
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DetectRequest'
-            examples:
-              motionDetected:
-                value:
-                  cameraId: "CAM-LOBBY-01"
-                  correlationId: "corr-123456789"
-                  timestamp: "2026-05-27T08:15:00Z"
-                  frameData: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+              $ref: '#/components/schemas/AccessCheckRequest'
       responses:
         '200':
-          description: Phân tích thành công và trả về kết quả định danh đối tượng
+          description: Thẩm định thành công (Quyết định có thể là ALLOW hoặc DENIED)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetectResponse'
-              examples:
-                humanDetected:
-                  value:
-                    detectionId: "0196fb3d-4ad7-7d1e-9f49-5d5148d2babc"
-                    riskLevel: "HIGH"
-                    objects:
-                      - objectType: "HUMAN"
-                        confidence: 0.98
-                        actionDetected: "Intruding"
-                vehicleDetected:
-                  value:
-                    detectionId: "0196fb3d-4ad7-7d1e-9f49-5d5148d2babd"
-                    riskLevel: "LOW"
-                    objects:
-                      - objectType: "VEHICLE"
-                        confidence: 0.92
-                        licensePlate: "30A-12345"
+                $ref: '#/components/schemas/AccessCheckResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -137,29 +43,119 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /vision/detections/{detectionId}:
+  /policies/access/{policyId}:
     get:
-      operationId: getDetectionById
-      summary: Truy vấn chi tiết một kết quả nhận diện
-      description: Cho phép tra cứu lại lịch sử phân tích của một frame bất kỳ dựa trên UUID duy nhất.
-      tags: [vision]
-      security:
-        - bearerAuth: []
+      operationId: getAccessPolicyById
+      summary: Lấy chi tiết thông tin chính sách an ninh
+      description: Được gọi khi Access Gate cần đồng bộ hoặc kiểm tra chi tiết cấu hình luật phân quyền cụ thể từ Core trung tâm.
+      tags:
+        - Policy Management
       parameters:
-        - name: detectionId
+        - name: policyId
           in: path
           required: true
-          description: UUID định danh duy nhất của kết quả phân tích hình ảnh.
+          description: Mã định danh duy nhất của chính sách an ninh cần truy vấn
           schema:
             type: string
-            format: uuid
+            pattern: '^POL-[0-9]{4}$'
+            example: 'POL-1024'
       responses:
         '200':
-          description: Tìm thấy kết quả chi tiết
+          description: Tìm thấy thông tin chính sách thành công
+          headers:
+            Deprecation:
+              description: Cảnh báo endpoint này sắp bị thay thế trong tương lai
+              schema:
+                type: string
+                example: "true"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetectResponse'
+                $ref: '#/components/schemas/AccessPolicy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /decisions:
+    get:
+      operationId: listAccessDecisions
+      summary: Lấy danh sách lịch sử quyết định ra vào
+      description: Phục vụ mục đích giám sát, cho phép lấy danh sách lịch sử quẹt thẻ phân trang theo cơ chế con trỏ (Cursor).
+      tags:
+        - Audit Logs
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Số lượng bản ghi tối đa trả về trên một trang
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: starting_after
+          in: query
+          required: false
+          description: Con trỏ (ID của quyết định) dùng để lấy trang tiếp theo
+          schema:
+            type: string
+            pattern: '^DEC-[a-fA-F0-9]{8}$'
+      responses:
+        '200':
+          description: Trả về danh sách quyết định kèm thông tin phân trang con trỏ
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, hasMore, nextCursor]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DecisionLog'
+                  hasMore:
+                    type: boolean
+                    description: Đánh dấu xem còn trang tiếp theo để tải hay không
+                  nextCursor:
+                    type: [string, "null"]
+                    description: Giá trị ID dùng làm tham số starting_after cho request tiếp theo
+                    example: 'DEC-a1b2c3d4'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /decisions/{decisionId}:
+    get:
+      operationId: getAccessDecisionById
+      summary: Tra cứu chi tiết một bản ghi quyết định ra vào
+      description: Phục vụ mục đích đối chiếu dữ liệu hoặc xử lý sự cố kẹt cổng cơ học khi có tranh chấp khẩn cấp.
+      tags:
+        - Audit Logs
+      parameters:
+        - name: decisionId
+          in: path
+          required: true
+          description: Mã định danh của bản ghi quyết định cần đối chiếu
+          schema:
+            type: string
+            pattern: '^DEC-[a-fA-F0-9]{8}$'
+            example: 'DEC-e7d7d4f1'
+      responses:
+        '200':
+          description: Tìm thấy dữ liệu log quyết định
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionLog'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -167,243 +163,275 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /health:
+    get:
+      operationId: getSystemHealth
+      summary: Kiểm tra trạng thái sức khỏe hệ thống (Heartbeat)
+      description: Được gọi định kỳ bởi Access Gate để giám sát kết nối trực tuyến kết nối đến Core Business.
+      tags:
+        - System Utilities
+      responses:
+        '200':
+          description: Hệ thống hoạt động bình thường
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealth'
+        '503':
+          description: Hệ thống Core Business đang quá tải hoặc gặp sự cố downstream
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+webhooks:
+  onSecurityAlert:
+    post:
+      summary: Webhook thông báo sự kiện khẩn cấp
+      description: Phát tín hiệu tự động từ Core Business về thiết bị Access Gate khi có cấu hình danh sách đen mới hoặc lệnh phong tỏa khu vực khẩn cấp.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alertId, type, zoneId, timestamp]
+              additionalProperties: false
+              properties:
+                alertId:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [LOCKDOWN, BLACKLIST_UPDATE]
+                zoneId:
+                  type: string
+                  example: "ZONE-BLOCK-A"
+                timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Khách nhận và xử lý tín hiệu webhook thành công
+
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  responses:
-    BadRequest:
-      description: Dữ liệu đầu vào sai định dạng cấu trúc JSON hoặc vượt quá dung lượng cho phép
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: "https://campus.local/errors/validation"
-            title: "Dữ liệu không hợp lệ"
-            status: 400
-            detail: "Kích thước chuỗi frameData vượt giới hạn cho phép (Tối đa 5MB)."
-            instance: "/vision/detect"
-            errors:
-              - field: "frameData"
-                code: "MAX_LENGTH_EXCEEDED"
-                message: "Kích thước ảnh quá lớn"
-
-    Unauthorized:
-      description: Thiếu thông tin xác thực Bearer Token hoặc token không hợp lệ
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: "https://campus.local/errors/unauthorized"
-            title: "Chưa xác thực"
-            status: 401
-            detail: "Thiếu Authorization header chứa hợp lệ Bearer JWT Token"
-            instance: "/vision/detect"
-            errors: []
-
-    NotFound:
-      description: Bản ghi hoặc tài nguyên yêu cầu không tồn tại trên hệ thống
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: "https://campus.local/errors/not-found"
-            title: "Không tìm thấy tài nguyên"
-            status: 404
-            detail: "Mã định danh dữ liệu không tồn tại trên hệ thống"
-            instance: "/vision/detections/0196fb3d-4ad7-7d1e-9f49-5d5148d2babc"
-
-    UnprocessableEntity:
-      description: Sai sót logic nghiệp vụ mặc dù đúng định dạng cú pháp cấu trúc
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: "https://campus.local/errors/unprocessable"
-            title: "Lỗi thực thi nghiệp vụ"
-            status: 422
-            detail: "Dữ liệu ảnh không thể giải mã hoặc xử lý bởi mô hình AI."
-            instance: "/vision/detect"
-
-    InternalServerError:
-      description: Lỗi phát sinh ngoài ý muốn từ phía hệ thống máy chủ AI Vision
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/Problem'
-          example:
-            type: "https://campus.local/errors/internal"
-            title: "Lỗi hệ thống máy chủ"
-            status: 500
-            detail: "Mô hình AI core bị mất kết nối đột ngột hoặc tràn bộ nhớ RAM."
-            instance: "/vision/detect"
+    GateApiKey:
+      type: apiKey
+      in: header
+      name: X-Gate-API-Key
+      description: Mã khóa bí mật được nhúng cố định dưới phần cứng của Access Gate dùng để định danh thiết bị.
 
   schemas:
-    HealthStatus:
+    AccessCheckRequest:
       type: object
+      required: [requestId, cardId, gateId, timestamp]
       additionalProperties: false
-      required: [status, service, time]
       properties:
-        status:
+        requestId:
           type: string
-          enum: [ok]
-          example: ok
-        service:
+          format: uuid
+          description: Mã định danh chống trùng lặp gói tin thời gian thực
+        cardId:
           type: string
-          example: ai-vision-service
-        time:
-          type: string
-          format: date-time
-          example: '2026-05-27T08:00:00Z'
-
-    DetectRequest:
-      type: object
-      additionalProperties: false
-      required: [cameraId, timestamp, frameData]
-      properties:
-        cameraId:
-          type: string
-          minLength: 3
-          maxLength: 50
-          pattern: '^CAM-[A-Z0-9-]+$'
-          description: Mã định danh duy nhất của camera phát hiện chuyển động.
-          example: "CAM-LOBBY-01"
-        correlationId:
+          pattern: '^[a-fA-F0-9]{32}$'
+          description: Chuỗi mã thẻ sinh viên/bảo vệ đã được băm SHA-256 từ phần cứng
+          example: '473a218d8e5b412ea0c01a6134b7f5c7'
+        gateId:
           type: string
           minLength: 5
-          maxLength: 100
-          description: Mã liên kết dùng để theo vết log nghiệp vụ tránh trùng lặp request xử lý.
-          example: "corr-123456789"
+          maxLength: 30
+          description: Mã định danh cổng vật lý thực hiện quẹt thẻ
+          example: 'GATE-BLOCK-A-01'
         timestamp:
           type: string
           format: date-time
-          description: Thời gian bắt được frame hình ảnh từ phía thiết bị camera.
-          example: "2026-05-27T08:15:00Z"
-        frameData:
-          type: string
-          minLength: 10
-          maxLength: 7000000
-          description: Chuỗi nhị phân hình ảnh đã mã hóa về dạng văn bản Base64.
-          example: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+          description: Mốc thời gian sinh viên tiến hành quẹt thẻ thực tế
 
-    DetectResponse:
+    AccessCheckResponse:
       type: object
+      required: [requestId, allow, reasonCode, timestamp]
       additionalProperties: false
-      required: [detectionId, riskLevel, objects]
       properties:
-        detectionId:
+        requestId:
           type: string
           format: uuid
-          description: Mã định danh kết quả nhận diện sinh ra bởi AI hệ thống.
-          example: "0196fb3d-4ad7-7d1e-9f49-5d5148d2babc"
-        riskLevel:
+        allow:
+          type: boolean
+          description: Quyết định mở cửa (true) hoặc khóa cửa (false)
+        reasonCode:
           type: string
-          enum: [LOW, MEDIUM, HIGH, CRITICAL]
-          description: Mức độ rủi ro an ninh phân tích được tự động.
-          example: "HIGH"
-        objects:
-          type: array
-          minItems: 0
-          maxItems: 50
-          items:
-            $ref: '#/components/schemas/DetectedObject'
+          enum: [SUCCESS, BLACKLISTED_CARD, EXPIRED_POLICY, OUT_OF_SCHEDULE, INVALID_ZONE, TIMESTAMP_SKEW]
+          description: Mã định danh lý do nghiệp vụ viết hoa phục vụ bóc tách tự động
+        policyId:
+          type: [string, "null"]
+          pattern: '^POL-[0-9]{4}$'
+          description: Mã chính sách được áp dụng để đưa ra quyết định thẩm định
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+          description: Thời hạn thẻ phải ra khỏi khu vực (áp dụng cho thẻ khách tạm thời)
+        timestamp:
+          type: string
+          format: date-time
 
-    DetectedObject:
+    AccessPolicy:
       type: object
-      required: [objectType, confidence]
+      required: [policyId, policyName, status, zoneId, policyType]
+      additionalProperties: false
       discriminator:
-        propertyName: objectType
+        propertyName: policyType
         mapping:
-          HUMAN: '#/components/schemas/HumanObject'
-          VEHICLE: '#/components/schemas/VehicleObject'
+          SCHEDULED: '#/components/schemas/ScheduledPolicy'
+          RESTRICTED: '#/components/schemas/RestrictedPolicy'
       properties:
-        objectType:
+        policyId:
           type: string
-          enum: [HUMAN, VEHICLE]
-          description: Trường định danh dùng cho việc ánh xạ đa hình (Polymorphism) phân loại thực thể.
-          example: "HUMAN"
-        confidence:
-          type: number
-          minimum: 0.0
-          maximum: 1.0
-          description: Độ chính xác tin cậy dự đoán của thuật toán AI.
-          example: 0.98
+          pattern: '^POL-[0-9]{4}$'
+        policyName:
+          type: string
+          minLength: 3
+          maxLength: 100
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        zoneId:
+          type: string
+          example: 'ZONE-BLOCK-A'
+        policyType:
+          type: string
+          enum: [SCHEDULED, RESTRICTED]
 
-    HumanObject:
+    ScheduledPolicy:
       allOf:
-        - $ref: '#/components/schemas/DetectedObject'
+        - $ref: '#/components/schemas/AccessPolicy'
         - type: object
-          additionalProperties: false
-          required: [actionDetected]
+          required: [timeSlots]
           properties:
-            actionDetected:
-              type: string
-              nullable: true
-              maxLength: 100
-              description: Hành vi bất thường nhận diện được, nhận giá trị null nếu không phát hiện nguy hiểm.
-              example: "Intruding"
+            timeSlots:
+              type: array
+              items:
+                type: string
+                example: "08:00-11:30"
 
-    VehicleObject:
+    RestrictedPolicy:
       allOf:
-        - $ref: '#/components/schemas/DetectedObject'
+        - $ref: '#/components/schemas/AccessPolicy'
         - type: object
-          additionalProperties: false
-          required: [licensePlate]
+          required: [allowedRoles, securityLevel]
           properties:
-            licensePlate:
-              type: string
-              nullable: true
-              pattern: '^[0-9]{2}[A-Z]-[0-9]{4,5}$'
-              description: Biển số xe quét được từ công cụ OCR, null nếu bị che khuất hoặc không rõ.
-              example: "30A-12345"
+            allowedRoles:
+              type: array
+              items:
+                type: string
+                enum: [LECTURER, SECURITY_GUARD, ADMIN]
+            securityLevel:
+              type: integer
+              minimum: 1
+              maximum: 5
+
+    DecisionLog:
+      type: object
+      required: [decisionId, requestId, cardId, gateId, result, timestamp]
+      additionalProperties: false
+      properties:
+        decisionId:
+          type: string
+          pattern: '^DEC-[a-fA-F0-9]{8}$'
+          example: 'DEC-e7d7d4f1'
+        requestId:
+          type: string
+          format: uuid
+        cardId:
+          type: string
+          pattern: '^[a-fA-F0-9]{32}$'
+        gateId:
+          type: string
+          example: 'GATE-BLOCK-A-01'
+        result:
+          type: string
+          enum: [ALLOWED, DENIED]
+        operatorNote:
+          type: [string, "null"]
+          maxLength: 255
+          example: 'Xử lý quẹt thẻ ghi nhận ngoại lệ từ hệ thống'
+        timestamp:
+          type: string
+          format: date-time
+
+    SystemHealth:
+      type: object
+      required: [status, timestamp]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN, DEGRADED]
+        timestamp:
+          type: string
+          format: date-time
 
     Problem:
       type: object
+      required: [type, title, status, detail, instance]
       additionalProperties: false
-      required: [type, title, status]
       properties:
         type:
           type: string
           format: uri
-          example: "https://campus.local/errors/validation"
+          description: Đường dẫn URI trỏ tới tài liệu mô tả mã lỗi cụ thể
+          example: 'https://api.smartcampus.edu.vn/probs/business-rule-violation'
         title:
           type: string
-          example: "Dữ liệu không hợp lệ"
+          description: Mô tả ngắn gọn về loại lỗi bằng tiếng Anh
+          example: 'Unprocessable Entity'
         status:
           type: integer
-          minimum: 400
-          maximum: 599
-          example: 400
+          description: HTTP status code tương ứng
+          example: 422
         detail:
           type: string
-          nullable: true
-          example: "Payload không đúng quy ước thiết kế JSON Schema"
+          description: Giải thích chi tiết nguyên nhân lỗi xảy ra trong tình huống thực tế
+          example: 'Timestamp skew is too large. Please synchronize the gate system clock via NTP.'
         instance:
           type: string
-          nullable: true
-          example: "/vision/detect"
-        errors:
-          type: array
-          minItems: 0
-          maxItems: 50
-          items:
-            type: object
-            additionalProperties: false
-            required: [field, code, message]
-            properties:
-              field:
-                type: string
-                example: "alertType"
-              code:
-                type: string
-                example: "ENUM_MISMATCH"
-              message:
-                type: string
-                example: "Giá trị không nằm trong danh sách enum cho phép"
+          description: Đường dẫn endpoint trực tiếp gây ra lỗi
+          example: '/access/check'
+
+  responses:
+    BadRequest:
+      description: Dữ liệu Payload gửi lên sai cấu trúc hoặc không khớp định dạng JSON Schema
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Thiết bị thiếu hoặc gửi sai mã khóa bảo mật bí mật X-Gate-API-Key ở Header
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Thiết bị hợp lệ nhưng không được cấp quyền đọc phân khu tài nguyên này
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Tài nguyên mã chính sách hoặc mã lịch sử quyết định truy vấn không tồn tại
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnprocessableEntity:
+      description: Dữ liệu đúng cấu trúc Schema nhưng vi phạm quy tắc logic nghiệp vụ (lệch giờ hệ thống)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalServerError:
+      description: Hệ thống máy chủ Core Business trung tâm gặp sự cố kỹ thuật hoặc quá tải cục bộ
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
