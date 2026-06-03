@@ -4,52 +4,49 @@
 
 ## 1. Thông tin dependency
 
-- Dependency số:
-- Producer:
-- Consumer:
-- Cơ chế: Queue async
-- Event/topic dự kiến:
-- Người ghi:
-- Ngày:
+- **Dependency số:** Pair 04
+- **Producer:** Core Business Service (Dịch vụ quản lý nghiệp vụ trung tâm)
+- **Consumer:** Notification Service (Dịch vụ thông báo đa kênh)
+- **Cơ chế:** Queue async (Hàng đợi thông điệp bất đồng bộ)
+- **Event/topic dự kiến:** `campus.core.access.denied`
+- **Người ghi:** Nhóm kiến trúc hạ tầng Smart Campus
+- **Ngày:** 03/06/2026
+
+---
 
 ## 2. Mục đích nghiệp vụ
 
-Mô tả ngắn event này sinh ra khi nào và consumer dùng để làm gì.
+Thông điệp bất đồng bộ này được sinh ra (Publish) ngay khi hệ thống Core Business thẩm định và đưa ra quyết định từ chối một lượt quẹt thẻ ra vào (ví dụ: phát hiện thẻ giả mạo, thẻ nằm trong danh sách đen hoặc sinh viên cố tình đi vào khu vực cấm). 
+
+Dịch vụ Notification (Consumer) sau khi nhận được sự kiện này sẽ tiến hành xử lý và ngay lập tức gửi cảnh báo đẩy (Push Notification) qua ứng dụng Mobile của sinh viên, đồng thời gửi tin nhắn khẩn cấp về ứng dụng của Đội bảo vệ Campus (Security Dashboard) để kịp thời can thiệp.
+
+---
 
 ## 3. Event name / topic
 
 | Mục | Giá trị |
 |---|---|
-| Event name | `<domain.event.action>` |
-| Topic/queue | `<topic-name>` |
-| Producer | `<service>` |
-| Consumer | `<service>` |
+| **Event name** | `campus.core.access.denied` |
+| **Topic/queue** | `q.campus.core.notification.access-denied` |
+| **Producer** | `core-business-service` |
+| **Consumer** | `notification-service` |
+
+---
 
 ## 4. Payload tối thiểu
 
 ```json
 {
-  "eventId": "uuid",
-  "eventType": "domain.event.created",
-  "occurredAt": "2026-05-10T08:30:00Z",
-  "correlationId": "uuid",
-  "source": "service-name",
-  "data": {}
+  "eventId": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+  "eventType": "campus.core.access.denied",
+  "occurredAt": "2026-06-03T17:45:00.123Z",
+  "correlationId": "req-998877-gate01",
+  "source": "core-business-service",
+  "data": {
+    "cardId": "473a218d8e5b412ea0c01a6134b7f5c7",
+    "gateId": "GATE-BLOCK-A-01",
+    "reasonCode": "BLACKLISTED_CARD",
+    "zoneId": "ZONE-HIGH-SECURITY",
+    "severity": "CRITICAL"
+  }
 }
-```
-
-## 5. Ràng buộc cần thống nhất
-
-| Vấn đề | Quyết định tạm thời |
-|---|---|
-| Event id có bắt buộc không? | Có |
-| Có cần correlationId không? | Có |
-| Có cho phép gửi trùng event không? | Có thể, consumer phải idempotent |
-| Retry khi lỗi | Ghi rõ ở Lab 03 |
-| Dead-letter queue | Ghi rõ ở Lab 03 |
-
-## 6. Issue chuyển sang Lab 03
-
-1. ...
-2. ...
-3. ...

@@ -1,5 +1,7 @@
 
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/SP1CQRF3)
+# Bài tập Lab 02 - OpenAPI
+Sinh viên thực hiện: 3132205
 # FIT4110 — Lab 02 OpenAPI 3.1 Contract-First (Nhóm A4 - AI Vision)
 
 Repo này dùng cho **Lab 02 — Thực hành đàm phán và viết OpenAPI 3.1** của học phần **Dịch vụ kết nối và công nghệ nền tảng (FIT4110)**.
