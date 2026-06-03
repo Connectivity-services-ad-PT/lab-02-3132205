@@ -1,0 +1,318 @@
+openapi: 3.1.0
+info:
+  title: Smart Campus — AI Vision API Service (Nhom A4)
+  version: 1.0.0
+  description: |
+    Hợp đồng API OpenAPI 3.1 chính thức của nhóm A4 (AI Vision) phục vụ đàm phán REST sync với nhóm A6 (Core Business) - Cặp đàm phán Pair 02.
+    Tập trung hoàn toàn vào các endpoint xử lý phân tích hình ảnh (tag: vision) và kiểm tra hệ thống (tag: system).
+servers:
+  - url: http://localhost:8000
+    description: Local Development Server (FastAPI)
+  - url: https://api.campus.local
+    description: Class network placeholder
+
+tags:
+  - name: system
+    description: Các endpoint hệ thống và vận hành cơ bản
+  - name: vision
+    description: Nghiệp vụ xử lý phân tích hình ảnh của AI Vision (Pair 02)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- ENDPOINT 1: HEALTH CHECK ---
+  /health:
+    get:
+      operationId: getHealth
+      summary: Kiểm tra trạng thái service AI Vision
+      tags:
+        - system
+      security: [] # Không yêu cầu token để Docker Healthcheck tự quét qua được
+      responses:
+        '200':
+          description: Service hoạt động bình thường
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - time
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  service:
+                    type: string
+                    example: "ai-vision-service"
+                  time:
+                    type: string
+                    format: date-time
+                    example: "2026-06-03T11:12:00Z"
+
+  # --- ENDPOINT 2: VISION DETECT ---
+  /vision/detect:
+    post:
+      operationId: submitVisionDetect
+      summary: Gửi ảnh phân tích (Xử lý đồng bộ — Trả kết quả trực tiếp)
+      tags:
+        - vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisionDetectRequest'
+      responses:
+        '201':
+          description: Phân tích thành công và trả về kết quả nhận diện vật thể
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionDetectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Nhập token dạng 'Bearer local-dev-token' để truy cập.
+
+  responses:
+    BadRequest:
+      description: Dữ liệu gửi lên không đúng định dạng JSON Schema hoặc thiếu trường bắt buộc
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/bad-request
+            title: Dữ liệu không hợp lệ
+            status: 400
+            detail: Trường cameraId bắt buộc phải tuân theo định dạng regex ^CAM-[0-9]{3}$
+            instance: https://campus.local/vision/detect
+            errors:
+              - field: body.cameraId
+                code: VALUE_ERROR
+                message: pattern không khớp định dạng quy định
+
+    Unauthorized:
+      description: Token xác thực bị thiếu, hết hạn hoặc sai cấu trúc
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/unauthorized
+            title: Chưa xác thực danh tính
+            status: 401
+            detail: Token định dạng không chính xác hoặc đã hết hạn, vui lòng kiểm tra lại tiêu đề Authorization
+            instance: https://campus.local/vision/detect
+            errors: []
+
+    Conflict:
+      description: Yêu cầu bị xung đột dữ liệu (Trùng lặp requestId đang xử lý)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/conflict
+            title: Yêu cầu bị xung đột dữ liệu
+            status: 409
+            detail: requestId này đã được gửi lên hệ thống và đang được xử lý, vui lòng không gửi lặp lại
+            instance: https://campus.local/vision/detect
+            errors: []
+
+    UnprocessableEntity:
+      description: Dữ liệu đúng định dạng JSON Schema nhưng không xử lý được (ví dụ ảnh lỗi, hỏng, quá mờ)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/unprocessable-entity
+            title: Lỗi xử lý nghiệp vụ hình ảnh
+            status: 422
+            detail: Không thể giải mã hoặc phân tích tệp ảnh gửi lên do tệp ảnh bị lỗi hoặc không hỗ trợ định dạng
+            instance: https://campus.local/vision/detect
+            errors: []
+
+    InternalServerError:
+      description: Lỗi hệ thống hoặc lỗi Runtime phía AI Vision Service không mong muốn
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://campus.local/errors/internal-server-error
+            title: Lỗi hệ thống nội bộ
+            status: 500
+            detail: Gặp lỗi nghiêm trọng khi kết nối tới cụm xử lý Model AI (GPU cluster timeout)
+            instance: https://campus.local/vision/detect
+            errors: []
+
+  schemas:
+    # Định dạng lỗi chuẩn RFC 7807 (Problem Details) khớp hoàn toàn với nhóm 6
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - instance
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - field
+              - code
+              - message
+            properties:
+              field:
+                type: string
+              code:
+                type: string
+              message:
+                type: string
+
+    # Dữ liệu đầu vào yêu cầu phân tích ảnh
+    VisionDetectRequest:
+      type: object
+      required:
+        - requestId
+        - cameraId
+        - capturedAt
+        - imageType
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          example: "0196fb3d-4ad7-7d1e-9f49-5d5148d2babc"
+        cameraId:
+          type: string
+          pattern: "^CAM-[0-9]{3}$"
+          example: "CAM-001"
+        capturedAt:
+          type: string
+          format: date-time
+          example: "2026-06-03T11:12:00Z"
+        imageType:
+          type: string
+          enum: [URL, BASE64]
+          example: "URL"
+        imageUrl:
+          type: string
+          format: uri
+          example: "https://campus.local/images/cam-001/frame-123.jpg"
+        imageBase64:
+          type: string
+          example: "iVBORw0KGgoAAAANSUhEUgAA..."
+        locationId:
+          type: string
+          example: "GATE-01"
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # Dữ liệu kết quả nhận diện trả về trực tiếp (Vẽ khung tọa độ Bounding Box)
+    VisionDetectResponse:
+      type: object
+      required:
+        - requestId
+        - status
+        - detectedAt
+        - detections
+        - processingTimeMs
+        - modelVersion
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          example: "0196fb3d-4ad7-7d1e-9f49-5d5148d2babc"
+        status:
+          type: string
+          enum: [SUCCESS, FAILED]
+          example: "SUCCESS"
+        detectedAt:
+          type: string
+          format: date-time
+          example: "2026-06-03T11:12:45Z"
+        detections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectionItem'
+        processingTimeMs:
+          type: integer
+          example: 245
+        modelVersion:
+          type: string
+          example: "yolov8x-face-v2.1"
+        notes:
+          type: string
+          example: "Phát hiện đối tượng chưa đăng ký trong khu vực kiểm soát."
+
+    # Chi tiết từng vật thể nhận diện được
+    DetectionItem:
+      type: object
+      required:
+        - type
+        - confidence
+      properties:
+        type:
+          type: string
+          enum: [UNKNOWN_PERSON, INTRUSION, PLATE, WEAPON, FIRE, SMOKE, ACCIDENT]
+          example: "UNKNOWN_PERSON"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.94
+        boundingBox:
+          type: object
+          required:
+            - x
+            - y
+            - width
+            - height
+          properties:
+            x:
+              type: number
+              example: 120.5
+            y:
+              type: number
+              example: 85.0
+            width:
+              type: number
+              example: 45.2
+            height:
+              type: number
+              example: 110.8
